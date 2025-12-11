@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 const Register = () => {
+  const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,14 +26,25 @@ const Register = () => {
       return;
     }
 
+    if (password.length < 6) {
+      toast.error('Le mot de passe doit contenir au moins 6 caractères');
+      return;
+    }
+
+    if (username.length < 3) {
+      toast.error('Le nom d\'utilisateur doit contenir au moins 3 caractères');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await register(name, email, password);
+      await register(username, name, email, password);
       toast.success('Compte créé avec succès !');
       navigate('/dashboard');
-    } catch (error) {
-      toast.error('Erreur lors de la création du compte');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Erreur lors de la création du compte';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -56,6 +68,18 @@ const Register = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Nom d'utilisateur</Label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="johndoe"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                minLength={3}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="name">Nom complet</Label>
               <Input
@@ -87,6 +111,7 @@ const Register = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
               />
             </div>
             <div className="space-y-2">

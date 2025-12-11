@@ -3,9 +3,12 @@ import axios from '@/lib/axios';
 import { URL_LOGIN, URL_REGISTER } from '@/constante';
 
 interface User {
-  id: string;
+  id: number;
+  username: string;
   name: string;
   email: string;
+  role: string;
+  createdAt: string;
 }
 
 interface LoginResponse {
@@ -22,8 +25,9 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (username: string, name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateUser: (user: User) => void;
   updatePlan: (plan: 'basic' | 'standard' | 'premium') => void;
 }
 
@@ -41,9 +45,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string) => {
-    console.log('Attempting to log in with', email, password,URL_LOGIN);
+    console.log('Attempting to log in with', email, password, URL_LOGIN);
     const response = await axios.post<LoginResponse>(URL_LOGIN, {
-      email,
+      username: email, // Le backend attend 'username'
       password
     });
 
@@ -56,11 +60,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(user);
   };
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (username: string, name: string, email: string, password: string) => {
     const response = await axios.post<RegisterResponse>(URL_REGISTER, {
+      username,
       name,
       email,
-      password,
+      password
     });
 
     const { user, token } = response.data;
@@ -78,6 +83,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('token');
   };
 
+  const updateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
   const updatePlan = (plan: 'basic' | 'standard' | 'premium') => {
     if (user) {
       const updatedUser = { ...user, plan };
@@ -93,6 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       login,
       register,
       logout,
+      updateUser,
       updatePlan
     }}>
       {children}

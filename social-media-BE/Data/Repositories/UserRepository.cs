@@ -48,7 +48,8 @@ namespace social_media_BE.Data.Repositories
                 checkCommand.Parameters.AddWithValue("@username", username);
                 checkCommand.Parameters.AddWithValue("@email", email);
                 
-                var count = (int)await checkCommand.ExecuteScalarAsync();
+                var result = await checkCommand.ExecuteScalarAsync();
+                var count = result != null ? Convert.ToInt32(result) : 0;
                 if (count > 0)
                 {
                     throw new InvalidOperationException("Username ou email déjà utilisé");
@@ -150,6 +151,130 @@ namespace social_media_BE.Data.Repositories
                 }
                 
                 return null;
+            }
+            finally
+            {
+                if (shouldCloseConnection)
+                {
+                    await connection.CloseAsync();
+                    connection.Dispose();
+                }
+            }
+        }
+
+        // UPDATE PROFILE - Mettre à jour nom et email
+        public async Task<bool> UpdateProfileAsync(int id, string name, string email, SqlConnection? connection = null)
+        {
+            bool shouldCloseConnection = false;
+            
+            if (connection == null)
+            {
+                connection = await _connectionFactory.CreateOpenConnectionAsync();
+                shouldCloseConnection = true;
+            }
+
+            try
+            {
+                // Vérifier si l'email est déjà utilisé par un autre utilisateur
+                var checkQuery = "SELECT COUNT(*) FROM users WHERE email = @email AND id != @id";
+                using var checkCommand = new SqlCommand(checkQuery, connection);
+                checkCommand.Parameters.AddWithValue("@email", email);
+                checkCommand.Parameters.AddWithValue("@id", id);
+                
+                var result = await checkCommand.ExecuteScalarAsync();
+                var count = result != null ? Convert.ToInt32(result) : 0;
+                if (count > 0)
+                {
+                    throw new InvalidOperationException("Cet email est déjà utilisé");
+                }
+
+                // Mettre à jour l'utilisateur
+                var updateQuery = "UPDATE users SET name = @name, email = @email WHERE id = @id";
+                using var updateCommand = new SqlCommand(updateQuery, connection);
+                updateCommand.Parameters.AddWithValue("@name", name);
+                updateCommand.Parameters.AddWithValue("@email", email);
+                updateCommand.Parameters.AddWithValue("@id", id);
+                
+                var rowsAffected = await updateCommand.ExecuteNonQueryAsync();
+                return rowsAffected > 0;
+            }
+            finally
+            {
+                if (shouldCloseConnection)
+                {
+                    await connection.CloseAsync();
+                    connection.Dispose();
+                }
+            }
+        }
+
+        // CHANGE PASSWORD - Changer le mot de passe
+        public async Task<bool> ChangePasswordAsync(int id, string currentPassword, string newPassword, SqlConnection? connection = null)
+        {
+            bool shouldCloseConnection = false;
+            
+            if (connection == null)
+            {
+                connection = await _connectionFactory.CreateOpenConnectionAsync();
+                shouldCloseConnection = true;
+            }
+
+            try
+            {
+                // Récupérer l'utilisateur
+                var user = await GetUserByIdAsync(id, connection);
+                if (user == null)
+                {
+                    return false;
+                }
+
+                // Vérifier le mot de passe actuel
+                if (!BCrypt.Net.BCrypt.Verify(currentPassword, user.Password))
+                {
+                    return false;
+                }
+
+                // Hasher le nouveau mot de passe
+                string hashedPassword = BCrypt.Net.BCrypt.HashPassword(newPassword);
+
+                // Mettre à jour le mot de passe
+                var updateQuery = "UPDATE users SET password = @password WHERE id = @id";
+                using var updateCommand = new SqlCommand(updateQuery, connection);
+                updateCommand.Parameters.AddWithValue("@password", hashedPassword);
+                updateCommand.Parameters.AddWithValue("@id", id);
+                
+                var rowsAffected = await updateCommand.ExecuteNonQueryAsync();
+                return rowsAffected > 0;
+            }
+            finally
+            {
+                if (shouldCloseConnection)
+                {
+                    await connection.CloseAsync();
+                    connection.Dispose();
+                }
+            }
+        }
+
+        // DELETE USER - Supprimer un utilisateur
+        public async Task<bool> DeleteUserAsync(int id, SqlConnection? connection = null)
+        {
+            bool shouldCloseConnection = false;
+            
+            if (connection == null)
+            {
+                connection = await _connectionFactory.CreateOpenConnectionAsync();
+                shouldCloseConnection = true;
+            }
+
+            try
+            {
+                var deleteQuery = "DELETE FROM users WHERE id = @id";
+                using var deleteCommand = new SqlCommand(deleteQuery, connection);
+                deleteCommand.Parameters.AddWithValue("@id", id);
+                
+                var rowsAffected = await deleteCommand.ExecuteNonQueryAsync();
+                return rowsAffected > 0;
             }
             finally
             {
