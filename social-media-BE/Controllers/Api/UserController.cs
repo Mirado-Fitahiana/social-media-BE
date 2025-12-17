@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using social_media_BE.Data;
 using social_media_BE.Data.Repositories;
 using social_media_BE.DTOs;
+using social_media_BE.Helpers;
 
 namespace social_media_BE.Controllers.Api
 {
@@ -16,9 +17,31 @@ namespace social_media_BE.Controllers.Api
             _userRepository = new UserRepository(connectionFactory);
         }
 
-        // PUT: api/user/{id}
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateProfile(int id, [FromBody] UpdateProfileDto updateDto)
+        // Helper pour extraire l'userId du token
+        private async Task<int?> GetUserIdFromAuthorizationAsync()
+        {
+            var authHeader = Request.Headers["Authorization"].ToString();
+            
+            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+            {
+                return null;
+            }
+
+            var token = authHeader.Substring("Bearer ".Length).Trim();
+            var username = TokenHelper.GetUsernameFromToken(token);
+
+            if (string.IsNullOrEmpty(username))
+            {
+                return null;
+            }
+
+            var user = await _userRepository.GetUserByUsernameOrEmailAsync(username);
+            return user?.Id;
+        }
+
+        // PUT: api/user/update-profile
+        [HttpPut("update-profile")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto updateDto)
         {
             if (!ModelState.IsValid)
             {
@@ -27,14 +50,20 @@ namespace social_media_BE.Controllers.Api
 
             try
             {
-                var updated = await _userRepository.UpdateProfileAsync(id, updateDto.Name, updateDto.Email);
+                var userId = await GetUserIdFromAuthorizationAsync();
+                if (userId == null)
+                {
+                    return Unauthorized(new { message = "Token invalide ou utilisateur non trouvé" });
+                }
+
+                var updated = await _userRepository.UpdateProfileAsync(userId.Value, updateDto.Username, updateDto.Email);
 
                 if (!updated)
                 {
                     return NotFound(new { message = "Utilisateur non trouvé" });
                 }
 
-                var user = await _userRepository.GetUserByIdAsync(id);
+                var user = await _userRepository.GetUserByIdAsync(userId.Value);
                 
                 if (user == null)
                 {
@@ -67,9 +96,9 @@ namespace social_media_BE.Controllers.Api
             }
         }
 
-        // PUT: api/user/{id}/password
-        [HttpPut("{id}/password")]
-        public async Task<IActionResult> ChangePassword(int id, [FromBody] ChangePasswordDto changePasswordDto)
+        // PUT: api/user/change-password
+        [HttpPut("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePasswordDto)
         {
             if (!ModelState.IsValid)
             {
@@ -78,7 +107,13 @@ namespace social_media_BE.Controllers.Api
 
             try
             {
-                var updated = await _userRepository.ChangePasswordAsync(id, changePasswordDto.CurrentPassword, changePasswordDto.NewPassword);
+                var userId = await GetUserIdFromAuthorizationAsync();
+                if (userId == null)
+                {
+                    return Unauthorized(new { message = "Token invalide ou utilisateur non trouvé" });
+                }
+
+                var updated = await _userRepository.ChangePasswordAsync(userId.Value, changePasswordDto.OldPassword, changePasswordDto.NewPassword);
 
                 if (!updated)
                 {
@@ -93,13 +128,19 @@ namespace social_media_BE.Controllers.Api
             }
         }
 
-        // DELETE: api/user/{id}
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteAccount(int id)
+        // DELETE: api/user/delete-account
+        [HttpDelete("delete-account")]
+        public async Task<IActionResult> DeleteAccount()
         {
             try
             {
-                var deleted = await _userRepository.DeleteUserAsync(id);
+                var userId = await GetUserIdFromAuthorizationAsync();
+                if (userId == null)
+                {
+                    return Unauthorized(new { message = "Token invalide ou utilisateur non trouvé" });
+                }
+
+                var deleted = await _userRepository.DeleteUserAsync(userId.Value);
 
                 if (!deleted)
                 {

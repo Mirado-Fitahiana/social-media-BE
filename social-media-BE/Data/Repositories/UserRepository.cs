@@ -83,7 +83,7 @@ namespace social_media_BE.Data.Repositories
         }
 
         // LOGIN - Vérifier les identifiants et retourner l'utilisateur
-        public async Task<User?> LoginAsync(string username, string password, SqlConnection? connection = null)
+        public async Task<User?> LoginAsync(string usernameOrEmail, string password, SqlConnection? connection = null)
         {
             bool shouldCloseConnection = false;
             
@@ -95,10 +95,11 @@ namespace social_media_BE.Data.Repositories
 
             try
             {
-                var query = "SELECT * FROM users WHERE username = @username";
+                // Accepter username OU email
+                var query = "SELECT * FROM users WHERE username = @usernameOrEmail OR email = @usernameOrEmail";
                 
                 using var command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@username", username);
+                command.Parameters.AddWithValue("@usernameOrEmail", usernameOrEmail);
                 
                 using var reader = await command.ExecuteReaderAsync();
                 
@@ -275,6 +276,43 @@ namespace social_media_BE.Data.Repositories
                 
                 var rowsAffected = await deleteCommand.ExecuteNonQueryAsync();
                 return rowsAffected > 0;
+            }
+            finally
+            {
+                if (shouldCloseConnection)
+                {
+                    await connection.CloseAsync();
+                    connection.Dispose();
+                }
+            }
+        }
+
+        // GET BY USERNAME OR EMAIL - Récupérer un utilisateur par username ou email
+        public async Task<User?> GetUserByUsernameOrEmailAsync(string usernameOrEmail, SqlConnection? connection = null)
+        {
+            bool shouldCloseConnection = false;
+            
+            if (connection == null)
+            {
+                connection = await _connectionFactory.CreateOpenConnectionAsync();
+                shouldCloseConnection = true;
+            }
+
+            try
+            {
+                var query = "SELECT * FROM users WHERE username = @usernameOrEmail OR email = @usernameOrEmail";
+                
+                using var command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@usernameOrEmail", usernameOrEmail);
+                
+                using var reader = await command.ExecuteReaderAsync();
+                
+                if (await reader.ReadAsync())
+                {
+                    return MapToUser(reader);
+                }
+                
+                return null;
             }
             finally
             {

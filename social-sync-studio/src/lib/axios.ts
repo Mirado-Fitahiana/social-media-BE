@@ -40,11 +40,16 @@ axiosInstance.interceptors.response.use(
           toast.error(data?.message || 'Requête invalide. Veuillez vérifier vos données.');
           break;
         case 401:
-          toast.error('Session expirée. Veuillez vous reconnecter.');
-          // Nettoyer le localStorage et rediriger vers login
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
+          // Ne pas rediriger si on est déjà sur la page de login ou register
+          const currentPath = window.location.pathname;
+          if (currentPath !== '/login' && currentPath !== '/register') {
+            toast.error('Session expirée. Veuillez vous reconnecter.');
+            // Nettoyer le localStorage et rediriger vers login
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+          }
+          // Sinon, ne rien faire - laisser le composant gérer l'erreur
           break;
         case 403:
           toast.error('Accès refusé. Vous n\'avez pas les permissions nécessaires.');

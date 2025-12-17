@@ -57,6 +57,7 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     
     if (!validateForm()) {
       return;
@@ -69,6 +70,7 @@ const Login = () => {
       toast.success('Connexion réussie !');
       navigate('/dashboard');
     } catch (error: any) {
+      console.error('Login error:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Erreur de connexion. Veuillez vérifier vos identifiants.';
       toast.error(errorMessage);
     } finally {

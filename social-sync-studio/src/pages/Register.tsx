@@ -20,6 +20,7 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
 
     if (password !== confirmPassword) {
       toast.error('Les mots de passe ne correspondent pas');
@@ -43,6 +44,7 @@ const Register = () => {
       toast.success('Compte créé avec succès !');
       navigate('/dashboard');
     } catch (error: any) {
+      console.error('Register error:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Erreur lors de la création du compte';
       toast.error(errorMessage);
     } finally {

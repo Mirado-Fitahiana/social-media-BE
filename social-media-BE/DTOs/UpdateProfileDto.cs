@@ -4,9 +4,9 @@ namespace social_media_BE.DTOs
 {
     public class UpdateProfileDto
     {
-        [Required(ErrorMessage = "Le nom est requis")]
-        [StringLength(100, ErrorMessage = "Le nom ne peut pas dépasser 100 caractères")]
-        public string Name { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Le nom d'utilisateur est requis")]
+        [StringLength(50, ErrorMessage = "Le nom d'utilisateur ne peut pas dépasser 50 caractères")]
+        public string Username { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "L'email est requis")]
         [EmailAddress(ErrorMessage = "Format d'email invalide")]

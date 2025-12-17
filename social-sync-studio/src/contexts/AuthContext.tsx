@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from '@/lib/axios';
-import { URL_LOGIN, URL_REGISTER } from '@/constante';
+import { REGISTER_URL, LOGIN_URL } from '@/constante';
 
 interface User {
   id: number;
@@ -45,23 +45,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string) => {
-    console.log('Attempting to log in with', email, password, URL_LOGIN);
-    const response = await axios.post<LoginResponse>(URL_LOGIN, {
-      username: email, // Le backend attend 'username'
-      password
-    });
+    try {
+      const response = await axios.post<LoginResponse>(LOGIN_URL, {
+        username: email, // Le backend attend 'username'
+        password
+      });
 
-    const { user, token } = response.data;
-    
-    // Stocker le token et l'utilisateur
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    
-    setUser(user);
+      const { user, token } = response.data;
+      
+      if (!user || !token) {
+        throw new Error('Réponse invalide du serveur');
+      }
+      
+      // Stocker le token et l'utilisateur
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      setUser(user);
+    } catch (error) {
+      // Propager l'erreur pour qu'elle soit catchée dans le composant Login
+      throw error;
+    }
   };
 
   const register = async (username: string, name: string, email: string, password: string) => {
-    const response = await axios.post<RegisterResponse>(URL_REGISTER, {
+    const response = await axios.post<RegisterResponse>(REGISTER_URL, {
       username,
       name,
       email,

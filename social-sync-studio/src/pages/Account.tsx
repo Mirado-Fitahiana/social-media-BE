@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import axios from '@/lib/axios';
-import { URL_UPDATE_PROFILE, URL_CHANGE_PASSWORD, URL_DELETE_ACCOUNT } from '@/constante';
+import { UPDATE_PROFILE_URL, CHANGE_PASSWORD_URL, DELETE_ACCOUNT_URL } from '@/constante';
 import { useNavigate } from 'react-router-dom';
 
 const Account = () => {
@@ -36,8 +36,8 @@ const Account = () => {
     setLoadingProfile(true);
 
     try {
-      const response = await axios.put(URL_UPDATE_PROFILE(user.id), {
-        name,
+      const response = await axios.put(UPDATE_PROFILE_URL, {
+        username: name,
         email
       });
 
@@ -75,8 +75,8 @@ const Account = () => {
     setLoadingPassword(true);
 
     try {
-      await axios.put(URL_CHANGE_PASSWORD(user.id), {
-        currentPassword,
+      await axios.put(CHANGE_PASSWORD_URL, {
+        oldPassword: currentPassword,
         newPassword
       });
 
@@ -107,7 +107,7 @@ const Account = () => {
     setLoadingDelete(true);
 
     try {
-      await axios.delete(URL_DELETE_ACCOUNT(user.id));
+      await axios.delete(DELETE_ACCOUNT_URL);
       
       toast.success('Compte supprimé avec succès');
       logout();
