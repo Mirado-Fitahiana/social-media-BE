@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using social_media_BE.Data;
 using social_media_BE.Data.Repositories;
 using social_media_BE.DTOs;
 
@@ -9,11 +8,11 @@ namespace social_media_BE.Controllers.Api
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        private readonly UserRepository _userRepository;
+        private readonly IUserRepository _userRepository;
 
-        public AuthController(SqlConnectionFactory connectionFactory)
+        public AuthController(IUserRepository userRepository)
         {
-            _userRepository = new UserRepository(connectionFactory);
+            _userRepository = userRepository;
         }
 
         // POST: api/auth/register

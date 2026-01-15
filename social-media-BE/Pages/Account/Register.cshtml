@@ -1,0 +1,59 @@
+@page
+@model social_media_BE.Pages.Account.RegisterModel
+@{
+    ViewData["Title"] = "Sign Up";
+    Layout = "~/Views/Shared/_AuthLayout.cshtml";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/login.css" asp-append-version="true" />
+}
+
+<div class="login-container d-flex justify-content-center align-items-center">
+    <div class="login-card shadow-lg p-4">
+        <h2 class="text-center mb-3 login-title">Create Account</h2>
+        <p class="text-center text-muted mb-4">Join the community in seconds</p>
+
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        <form method="post">
+            <div class="mb-3">
+                <label asp-for="Input.Name" class="form-label fw-semibold"></label>
+                <input asp-for="Input.Name" class="form-control custom-input" />
+                <span asp-validation-for="Input.Name" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Input.Username" class="form-label fw-semibold"></label>
+                <input asp-for="Input.Username" class="form-control custom-input" />
+                <span asp-validation-for="Input.Username" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Input.Email" class="form-label fw-semibold"></label>
+                <input asp-for="Input.Email" class="form-control custom-input" />
+                <span asp-validation-for="Input.Email" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Input.Password" class="form-label fw-semibold"></label>
+                <input asp-for="Input.Password" class="form-control custom-input" type="password" />
+                <span asp-validation-for="Input.Password" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Input.ConfirmPassword" class="form-label fw-semibold"></label>
+                <input asp-for="Input.ConfirmPassword" class="form-control custom-input" type="password" />
+                <span asp-validation-for="Input.ConfirmPassword" class="text-danger small"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 login-btn">Sign up</button>
+        </form>
+
+        <div class="text-center mt-3">
+            <a href="/Account/Login" class="create-account-link">Already have an account? Sign in</a>
+        </div>
+    </div>
+</div>
+
+<partial name="_ValidationScriptsPartial" />

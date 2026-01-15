@@ -1,27 +1,26 @@
 using Microsoft.Data.SqlClient;
 
-namespace social_media_BE.Data
+namespace social_media_BE.Data;
+
+public class SqlConnectionFactory : ISqlConnectionFactory
 {
-    public class SqlConnectionFactory
+    private readonly string _connectionString;
+
+    public SqlConnectionFactory(IConfiguration configuration)
     {
-        private readonly string _connectionString;
+        _connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+    }
 
-        public SqlConnectionFactory(IConfiguration configuration)
-        {
-            _connectionString = configuration.GetConnectionString("DefaultConnection")
-                ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-        }
+    public SqlConnection CreateConnection()
+    {
+        return new SqlConnection(_connectionString);
+    }
 
-        public SqlConnection CreateConnection()
-        {
-            return new SqlConnection(_connectionString);
-        }
-
-        public async Task<SqlConnection> CreateOpenConnectionAsync()
-        {
-            var connection = new SqlConnection(_connectionString);
-            await connection.OpenAsync();
-            return connection;
-        }
+    public async Task<SqlConnection> CreateOpenConnectionAsync()
+    {
+        var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync();
+        return connection;
     }
 }

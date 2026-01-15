@@ -1,0 +1,54 @@
+/* Center the login form on screen */
+.login-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #4e73df, #1cc88a);
+    padding: 20px;
+}
+
+/* Main card style */
+.login-card {
+    background: #ffffff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 420px;
+}
+
+/* Title styling */
+.login-title {
+    font-weight: 700;
+    color: #4e73df;
+}
+
+/* Inputs */
+.custom-input {
+    border-radius: 10px;
+    padding: 10px 14px;
+    border: 1px solid #d1d3e2;
+    transition: 0.2s;
+}
+
+.custom-input:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 0.15rem rgba(78, 115, 223, 0.25);
+}
+
+/* Button */
+.login-btn {
+    padding: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 10px;
+}
+
+/* Link */
+.create-account-link {
+    font-size: 14px;
+    color: #4e73df;
+    text-decoration: none;
+    transition: 0.2s;
+}
+
+.create-account-link:hover {
+    text-decoration: underline;
+    color: #2e59d9;
+}
