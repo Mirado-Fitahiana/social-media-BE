@@ -50,10 +50,14 @@ namespace social_media_BE.Controllers.Api
                     CreatedAt = user.CreatedAt
                 };
 
+                // TODO: Générer un vrai JWT token
+                var token = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{user.Username}:{DateTime.UtcNow.Ticks}"));
+
                 return CreatedAtAction(nameof(Register), new { id = userId }, new
                 {
                     message = "Utilisateur créé avec succès",
-                    user = userDto
+                    user = userDto,
+                    token = token
                 });
             }
             catch (InvalidOperationException ex)
@@ -94,11 +98,14 @@ namespace social_media_BE.Controllers.Api
                     CreatedAt = user.CreatedAt
                 };
 
+                // TODO: Générer un vrai JWT token
+                var token = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{user.Username}:{DateTime.UtcNow.Ticks}"));
+
                 return Ok(new
                 {
                     message = "Connexion réussie",
-                    user = userDto
-                    // TODO: Ajouter un JWT token ici
+                    user = userDto,
+                    token = token
                 });
             }
             catch (Exception ex)

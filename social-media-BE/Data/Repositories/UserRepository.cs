@@ -26,81 +26,317 @@ public class UserRepository : IUserRepository
         };
     }
 
-    public async Task<int> RegisterAsync(string username, string email, string name, string password)
+    // REGISTER - Créer un nouvel utilisateur avec mot de passe hashé
+    public async Task<int> RegisterAsync(string username, string email, string name, string password, SqlConnection? connection = null)
     {
-        await using var connection = await _connectionFactory.CreateOpenConnectionAsync();
-
-        const string checkQuery = "SELECT COUNT(*) FROM users WHERE username = @username OR email = @email";
-        using var checkCommand = new SqlCommand(checkQuery, connection);
-        checkCommand.Parameters.AddWithValue("@username", username);
-        checkCommand.Parameters.AddWithValue("@email", email);
-
-        var countResult = await checkCommand.ExecuteScalarAsync();
-        var count = Convert.ToInt32(countResult);
-        if (count > 0)
+        bool shouldCloseConnection = false;
+        
+        if (connection == null)
         {
-            throw new InvalidOperationException("Username ou email deja utilise");
+            connection = await _connectionFactory.CreateOpenConnectionAsync();
+            shouldCloseConnection = true;
         }
 
-        string hashedPassword = BCrypt.Net.BCrypt.HashPassword(password);
-
-        const string insertQuery = @"INSERT INTO users (username, email, name, password, role) 
-                                   VALUES (@username, @email, @name, @password, 'user');
-                                   SELECT CAST(SCOPE_IDENTITY() AS int)";
-
-        using var insertCommand = new SqlCommand(insertQuery, connection);
-        insertCommand.Parameters.AddWithValue("@username", username);
-        insertCommand.Parameters.AddWithValue("@email", email);
-        insertCommand.Parameters.AddWithValue("@name", name);
-        insertCommand.Parameters.AddWithValue("@password", hashedPassword);
-
-        var userId = await insertCommand.ExecuteScalarAsync();
-        if (userId is null)
+        try
         {
-            throw new InvalidOperationException("Impossible de recuperer l'identifiant cree");
-        }
-
-        return Convert.ToInt32(userId);
-    }
-
-    public async Task<User?> LoginAsync(string username, string password)
-    {
-        await using var connection = await _connectionFactory.CreateOpenConnectionAsync();
-
-        const string query = "SELECT * FROM users WHERE username = @username";
-        using var command = new SqlCommand(query, connection);
-        command.Parameters.AddWithValue("@username", username);
-
-        using var reader = await command.ExecuteReaderAsync();
-
-        if (await reader.ReadAsync())
-        {
-            var user = MapToUser(reader);
-
-            if (BCrypt.Net.BCrypt.Verify(password, user.Password))
+            // Vérifier si l'username ou l'email existe déjà
+            var checkQuery = "SELECT COUNT(*) FROM users WHERE username = @username OR email = @email";
+            using var checkCommand = new SqlCommand(checkQuery, connection);
+            checkCommand.Parameters.AddWithValue("@username", username);
+            checkCommand.Parameters.AddWithValue("@email", email);
+            
+            var result = await checkCommand.ExecuteScalarAsync();
+            var count = result != null ? Convert.ToInt32(result) : 0;
+            if (count > 0)
             {
-                return user;
+                throw new InvalidOperationException("Username ou email déjà utilisé");
+            }
+
+            // Hasher le mot de passe
+            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(password);
+
+            // Insérer le nouvel utilisateur
+            var insertQuery = @"INSERT INTO users (username, email, name, password, role) 
+                               VALUES (@username, @email, @name, @password, 'user');
+                               SELECT CAST(SCOPE_IDENTITY() AS int)";
+
+            using var insertCommand = new SqlCommand(insertQuery, connection);
+            insertCommand.Parameters.AddWithValue("@username", username);
+            insertCommand.Parameters.AddWithValue("@email", email);
+            insertCommand.Parameters.AddWithValue("@name", name);
+            insertCommand.Parameters.AddWithValue("@password", hashedPassword);
+
+            var userId = await insertCommand.ExecuteScalarAsync();
+            if (userId is null)
+            {
+                throw new InvalidOperationException("Impossible de récupérer l'identifiant créé");
+            }
+
+            return Convert.ToInt32(userId);
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+                connection.Dispose();
             }
         }
-
-        return null;
     }
 
-    public async Task<User?> GetUserByIdAsync(int id)
+    // LOGIN - Vérifier les identifiants et retourner l'utilisateur
+    public async Task<User?> LoginAsync(string usernameOrEmail, string password, SqlConnection? connection = null)
     {
-        await using var connection = await _connectionFactory.CreateOpenConnectionAsync();
-
-        const string query = "SELECT * FROM users WHERE id = @id";
-        using var command = new SqlCommand(query, connection);
-        command.Parameters.AddWithValue("@id", id);
-
-        using var reader = await command.ExecuteReaderAsync();
-
-        if (await reader.ReadAsync())
+        bool shouldCloseConnection = false;
+        
+        if (connection == null)
         {
-            return MapToUser(reader);
+            connection = await _connectionFactory.CreateOpenConnectionAsync();
+            shouldCloseConnection = true;
         }
 
-        return null;
+        try
+        {
+            // Accepter username OU email
+            var query = "SELECT * FROM users WHERE username = @usernameOrEmail OR email = @usernameOrEmail";
+            
+            using var command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@usernameOrEmail", usernameOrEmail);
+            
+            using var reader = await command.ExecuteReaderAsync();
+            
+            if (await reader.ReadAsync())
+            {
+                var user = MapToUser(reader);
+                
+                // Vérifier le mot de passe hashé
+                if (BCrypt.Net.BCrypt.Verify(password, user.Password))
+                {
+                    return user;
+                }
+            }
+            
+            return null;
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+                connection.Dispose();
+            }
+        }
+    }
+
+    // GET BY ID - Récupérer un utilisateur par ID
+    public async Task<User?> GetUserByIdAsync(int id, SqlConnection? connection = null)
+    {
+        bool shouldCloseConnection = false;
+        
+        if (connection == null)
+        {
+            connection = await _connectionFactory.CreateOpenConnectionAsync();
+            shouldCloseConnection = true;
+        }
+
+        try
+        {
+            var query = "SELECT * FROM users WHERE id = @id";
+            using var command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@id", id);
+
+            using var reader = await command.ExecuteReaderAsync();
+
+            if (await reader.ReadAsync())
+            {
+                return MapToUser(reader);
+            }
+
+            return null;
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+                connection.Dispose();
+            }
+        }
+    }
+
+    // UPDATE PROFILE - Mettre à jour nom et email
+    public async Task<bool> UpdateProfileAsync(int id, string name, string email, SqlConnection? connection = null)
+    {
+        bool shouldCloseConnection = false;
+        
+        if (connection == null)
+        {
+            connection = await _connectionFactory.CreateOpenConnectionAsync();
+            shouldCloseConnection = true;
+        }
+
+        try
+        {
+            // Vérifier si l'email est déjà utilisé par un autre utilisateur
+            var checkQuery = "SELECT COUNT(*) FROM users WHERE email = @email AND id != @id";
+            using var checkCommand = new SqlCommand(checkQuery, connection);
+            checkCommand.Parameters.AddWithValue("@email", email);
+            checkCommand.Parameters.AddWithValue("@id", id);
+            
+            var result = await checkCommand.ExecuteScalarAsync();
+            var count = result != null ? Convert.ToInt32(result) : 0;
+            if (count > 0)
+            {
+                throw new InvalidOperationException("Cet email est déjà utilisé");
+            }
+
+            // Mettre à jour l'utilisateur
+            var updateQuery = "UPDATE users SET name = @name, email = @email WHERE id = @id";
+            using var updateCommand = new SqlCommand(updateQuery, connection);
+            updateCommand.Parameters.AddWithValue("@name", name);
+            updateCommand.Parameters.AddWithValue("@email", email);
+            updateCommand.Parameters.AddWithValue("@id", id);
+            
+            var rowsAffected = await updateCommand.ExecuteNonQueryAsync();
+            return rowsAffected > 0;
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+                connection.Dispose();
+            }
+        }
+    }
+
+    // CHANGE PASSWORD - Changer le mot de passe
+    public async Task<bool> ChangePasswordAsync(int id, string currentPassword, string newPassword, SqlConnection? connection = null)
+    {
+        bool shouldCloseConnection = false;
+        
+        if (connection == null)
+        {
+            connection = await _connectionFactory.CreateOpenConnectionAsync();
+            shouldCloseConnection = true;
+        }
+
+        try
+        {
+            // Récupérer l'utilisateur
+            var user = await GetUserByIdAsync(id, connection);
+            if (user == null)
+            {
+                return false;
+            }
+
+            // Vérifier le mot de passe actuel
+            if (!BCrypt.Net.BCrypt.Verify(currentPassword, user.Password))
+            {
+                return false;
+            }
+
+            // Hasher le nouveau mot de passe
+            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(newPassword);
+
+            // Mettre à jour le mot de passe
+            var updateQuery = "UPDATE users SET password = @password WHERE id = @id";
+            using var updateCommand = new SqlCommand(updateQuery, connection);
+            updateCommand.Parameters.AddWithValue("@password", hashedPassword);
+            updateCommand.Parameters.AddWithValue("@id", id);
+            
+            var rowsAffected = await updateCommand.ExecuteNonQueryAsync();
+            return rowsAffected > 0;
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+                connection.Dispose();
+            }
+        }
+    }
+
+    // DELETE USER - Supprimer un utilisateur
+    public async Task<bool> DeleteUserAsync(int id, SqlConnection? connection = null)
+    {
+        bool shouldCloseConnection = false;
+        
+        if (connection == null)
+        {
+            connection = await _connectionFactory.CreateOpenConnectionAsync();
+            shouldCloseConnection = true;
+        }
+
+        try
+        {
+            var deleteQuery = "DELETE FROM users WHERE id = @id";
+            using var deleteCommand = new SqlCommand(deleteQuery, connection);
+            deleteCommand.Parameters.AddWithValue("@id", id);
+            
+            var rowsAffected = await deleteCommand.ExecuteNonQueryAsync();
+            return rowsAffected > 0;
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+                connection.Dispose();
+            }
+        }
+    }
+
+    // GET BY USERNAME OR EMAIL - Récupérer un utilisateur par username ou email
+    public async Task<User?> GetUserByUsernameOrEmailAsync(string usernameOrEmail, SqlConnection? connection = null)
+    {
+        bool shouldCloseConnection = false;
+        
+        if (connection == null)
+        {
+            connection = await _connectionFactory.CreateOpenConnectionAsync();
+            shouldCloseConnection = true;
+        }
+
+        try
+        {
+            var query = "SELECT * FROM users WHERE username = @usernameOrEmail OR email = @usernameOrEmail";
+            
+            using var command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@usernameOrEmail", usernameOrEmail);
+            
+            using var reader = await command.ExecuteReaderAsync();
+            
+            if (await reader.ReadAsync())
+            {
+                return MapToUser(reader);
+            }
+            
+            return null;
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+                connection.Dispose();
+            }
+        }
+    }
+
+    public Task<int> RegisterAsync(string username, string email, string name, string password)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<User?> LoginAsync(string username, string password)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<User?> GetUserByIdAsync(int id)
+    {
+        throw new NotImplementedException();
     }
 }

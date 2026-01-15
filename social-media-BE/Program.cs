@@ -23,6 +23,15 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.SlidingExpiration = true;
     });
 
+// Ajouter CORS pour permettre les requêtes depuis le front React
+builder.Services.AddCors(options =>
+{
+       options.AddPolicy("AllowAll",
+           policy => policy.AllowAnyOrigin()
+                           .AllowAnyHeader()
+                           .AllowAnyMethod());
+   });
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -34,7 +43,9 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseRouting();
 
-app.UseAuthentication();
+// Activer CORS
+app.UseCors("AllowAll");
+
 app.UseAuthorization();
 
 app.MapStaticAssets();
